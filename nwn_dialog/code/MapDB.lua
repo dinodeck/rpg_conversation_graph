@@ -1,0 +1,4 @@
+MapDB =
+{
+    ["town"] = CreateTownMap,
+}

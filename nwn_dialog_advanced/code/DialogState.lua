@@ -32,7 +32,6 @@ function DialogState:Create(dialogDef)
     }
 
 
-
     local layout = Layout:Create()
     layout:Contract('screen', 32, 20)
     layout:SplitHorz('screen', 'top', 'bottom', 0.5, 1)
@@ -46,7 +45,96 @@ function DialogState:Create(dialogDef)
     }
 
     setmetatable(this, self)
+    this:ProcessGraph(this.mGraph)
     return this
+end
+
+function DialogState:ProcessGraph(root)
+
+    if root.processed == true then
+        print("Early out")
+        return
+    end
+
+    print(root)
+    self.mIdToNode = self:CreateIdToNodeTable(root)
+
+
+    print("CALL ADD LOOPS", tostring(root))
+    self:AddLoops(root)
+
+    root.processed = true
+end
+
+-- In DialogState.lua
+function DialogState:AddLoops(node)
+
+    if not node then
+        print("Add nodes: node is null")
+        return
+    end
+
+    if node.jump then
+        -- Store the id locally and remove it from the node
+        local id = node.jump
+        node.jump = nil
+
+        -- Get the node the id points to
+        local jumpNode = self.mIdToNode[id]
+
+        print("ADDING JUMP", id, jumpNode)
+
+        -- Some error checking
+        if not jumpNode then
+            local error = string.format(
+                "Error: Couldn't find node with id [%s]", id)
+            print(error)
+            return
+        end
+
+        if node.children then
+            local warning = string.format(
+                "Warning jump to [%s] destroys children in node.", id)
+            print(warning)
+        end
+
+        -- Add loop
+        node.children = { jumpNode }
+
+
+        return -- we can skip this node's children
+    end
+
+    for k, v in ipairs(node.children or {}) do
+        self:AddLoops(v)
+    end
+
+end
+
+function DialogState:CreateIdToNodeTable(root, nodes)
+    local t = nodes or {}
+
+    if root ~= nil then
+
+        if root.id then
+
+            if t[root.id] then
+                local warning = string.format(
+                    "Root id [%s] appears more than once!",
+                    root.id)
+                print(warning)
+            end
+
+            t[root.id] = root
+        end
+
+        for k, v in ipairs(root.children or {}) do
+            self:CreateIdToNodeTable(v, t)
+        end
+
+    end
+
+    return t
 end
 
 function DialogState:Enter()
@@ -76,14 +164,27 @@ function DialogState:FilterNodes(nodeList)
     local passingNodes = {}
 
     for k, v in ipairs(nodeList) do
-        if (v.condition == nil or v.condition() == true) then
+        if v.condition == nil or v.condition() == true then
             table.insert(passingNodes, v)
         end
     end
-    -- Filter code will go here!
 
     return passingNodes
 end
+
+function DialogState:FilterForResponses(nodeList)
+
+    local passingNodes = {}
+
+    for k, v in ipairs(nodeList) do
+        if v.type == "response" then
+            table.insert(passingNodes, v)
+        end
+    end
+
+    return passingNodes
+end
+
 
 function DialogState:MoveToNode(def)
     self.mCurrentNode = def
@@ -91,7 +192,9 @@ function DialogState:MoveToNode(def)
     local responses = def.children or {}
 
     -- Filter the responses
+    responses = self:FilterForResponses(responses)
     responses = self:FilterNodes(responses)
+
 
     if next(responses) == nil then
         self.mAreThereReplies = false
@@ -273,6 +376,33 @@ function DialogState:UpdateExit(dt)
 
 end
 
+function DialogState:MoveToChainedNode(node)
+
+    if node.exit then
+        self:InitExitTransition()
+        self.mMode = eMode.Exiting
+        return
+    end
+    -- Deal with chained nodes
+    local nodes = node.children or {}
+    -- Filter the nodes
+    nodes = self:FilterNodes(nodes)
+    local nodeToChangeTo = nil
+    for k, v in ipairs(nodes) do
+        if v.type == "dialog" then
+            nodeToChangeTo = v
+            break
+        end
+    end
+
+    if nodeToChangeTo ~= nil then
+        self:MoveToNode(nodeToChangeTo)
+    else
+        print("This conversation graph is broken!")
+    end
+
+end
+
 function DialogState:HandleInput()
     -- only accept input when no transition is running.
     if self.mMode ~= eMode.Running then
@@ -288,7 +418,7 @@ function DialogState:HandleInput()
     elseif self.mAreThereReplies then
         self.mReplyMenu:HandleInput()
     elseif spacePressed then
-        -- Deal with chained nodes
+        self:MoveToChainedNode(self.mCurrentNode)
     end
 
     -- if Keyboard.JustPressed(KEY_SPACE) then

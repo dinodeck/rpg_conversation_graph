@@ -381,6 +381,10 @@ manifest =
         {
             path = "code/conversation/Conversation_4.lua"
         },
+        ['Conversation_5.lua'] =
+        {
+            path = "code/conversation/Conversation_5.lua"
+        },
     },
     textures =
     {

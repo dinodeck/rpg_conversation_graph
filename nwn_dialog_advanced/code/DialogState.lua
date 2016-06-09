@@ -51,6 +51,18 @@ end
 
 function DialogState:ProcessGraph(root)
 
+    -- Reset variables to original values
+
+    root.variables = root.variables or {}
+
+    if root.variables_original == nil then
+        local clone = ShallowClone(root.variables)
+        root.variables_original = clone
+    else
+        local clone = ShallowClone(root.variables_original)
+        root.variables = clone
+    end
+
     if root.processed == true then
         print("Early out")
         return
@@ -162,9 +174,12 @@ end
 function DialogState:FilterNodes(nodeList)
 
     local passingNodes = {}
+    local variables = self.mGraph.variables or {}
 
     for k, v in ipairs(nodeList) do
-        if v.condition == nil or v.condition() == true then
+        if  v.condition == nil or
+            v.condition(variables) == true
+        then
             table.insert(passingNodes, v)
         end
     end
@@ -237,6 +252,12 @@ function DialogState:OnReplySelected(index, item)
         self:InitExitTransition()
         self.mMode = eMode.Exiting
         return
+    end
+
+    if item.on_choose then
+        local variables = self.mGraph.variables or {}
+        print("calling on choose")
+        item.on_choose(variables)
     end
 
     local nodeList = self:FilterNodes(item.children)

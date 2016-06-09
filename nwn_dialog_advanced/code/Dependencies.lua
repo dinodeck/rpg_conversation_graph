@@ -110,5 +110,6 @@ Apply({
         "Conversation_2.lua",
         "Conversation_3.lua",
         "Conversation_4.lua",
+        "Conversation_5.lua",
     },
     function(v) Asset.Run(v) end)

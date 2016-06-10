@@ -100,7 +100,6 @@ Apply({
         "CESteal.lua",
         "ArenaState.lua",
         "ArenaCompleteState.lua",
-        -- "ShopState.lua",
         "DefaultGameState.lua",
         "SaveScheme.lua",
         "PrintTable.lua",
@@ -109,5 +108,8 @@ Apply({
         "DialogState.lua",
         "Conversation_1.lua",
         "Conversation_2.lua",
+        "Conversation_3.lua",
+        "Conversation_4.lua",
+        "Conversation_5.lua",
     },
     function(v) Asset.Run(v) end)

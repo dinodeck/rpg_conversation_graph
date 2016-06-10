@@ -9,7 +9,7 @@ function CreateTownMap(state)
     {
         speakerX = x,
         speakerY = y,
-        graphDef = conversation_2
+        graphDef = conversation_5
     }
     local dialogState = DialogState:Create(dialogDef)
 
